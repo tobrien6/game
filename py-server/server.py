@@ -89,6 +89,7 @@ class WorldStateService:
     async def get_chunk(self, chunk_coords):
         chunk = self.world_grid.load_chunk(chunk_coords)
         tiles_data = [[tile.terrain.value for tile in row] for row in chunk.tiles]
+        print(f"returning chunk: {chunk_coords[0]}, {chunk_coords[1]}")
         return {
             'action': 'ChunkData',
             'chunk_x': chunk_coords[0],
