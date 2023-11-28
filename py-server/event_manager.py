@@ -7,6 +7,7 @@ class EventQueue:
         self.queue = asyncio.Queue()
 
     async def put_event(self, event):
+        print(f"event put in queue: {event}")
         await self.queue.put(event)
 
     async def get_event(self):

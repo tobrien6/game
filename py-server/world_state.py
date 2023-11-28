@@ -101,14 +101,13 @@ class WorldState:
 
     async def move_player_to_tile(self, player_id, tile_xy):
         # DEBUG
-        for p in self.players:
-            print(f"player {p.player_id}: ({p.x},{p.y})")
+        for pid, p in self.players.items():
+            print(f"player {pid}: ({p.x},{p.y})")
 
         tile_x = tile_xy[0]
         tile_y = tile_xy[1]
         player = self.players.get(player_id)
-        
-        print(player)
+        print(f"PLAYER ID: {player_id}")
         
         if player:
             # First, update the player's action points.
@@ -123,7 +122,7 @@ class WorldState:
             if self.world_grid.is_move_valid(chunk_coords, local_x, local_y):
                 # Move the player to the tile and update the tile occupation status.
                 player.move_to_tile(tile_x, tile_y, self.world_grid)  # This may need to be updated as well.
-                self.world_grid.update_tile(chunk_coords, local_x, local_y, occupied=False)
+                #self.world_grid.update_tile(chunk_coords, local_x, local_y, occupied=True) # for this to work, I need to set previous tile to occupied false
 
             event = {'type': EventType.PLAYER_MOVED, 'data': {'action': 'PlayerMoved', 'player_id': player_id, 'x': player.x, 'y': player.y}}
             await self.event_queue.put_event(event)

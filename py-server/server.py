@@ -54,16 +54,19 @@ async def handler(websocket, path):
         player = Player.create_new_player(user_id, player_name, websocket)
     else:
         player = Player(websocket=websocket, **player_data)
+
+    print(f"player logged in and ready: {player.player_id}")    
     
     # Register the player with the connection manager
     connection_manager.register(player)
     await world.add_player(player)
 
     # Main game loop for the WebSocket connection
-    while True:
-        message = await websocket.recv()
-        await process_game_message(message, player)
-    """
+    try:
+        while True:
+            message = await websocket.recv()
+            print(f"received message: {json.loads(message)} for player {player.player_id}")
+            await process_game_message(message, player)
     except websockets.exceptions.ConnectionClosed as e:
         print(e)
         # Clean up when the connection drops
@@ -76,7 +79,6 @@ async def handler(websocket, path):
             print(e)
             player.save()
             print(f"error for user {player.player_id}: {e}")
-    """
 
 
 async def process_game_message(message, player):
@@ -105,10 +107,19 @@ async def process_game_message(message, player):
         player_id = player.player_id
         x = player.x
         y = player.y
-        resp = {"action": "InitializePlayer", 
-                "player_id": player_id,
-                "x": x,
-                "y": y}
+        # Gather the locations of all other players
+        other_players = [
+            {"player_id": p.player_id, "x": p.x, "y": p.y}
+            for p in world.players.values() if p.player_id != player_id
+        ]
+        # Send initialization data including other players' locations
+        resp = {
+            "action": "InitializePlayer", 
+            "player_id": player_id,
+            "x": x,
+            "y": y,
+            "other_players": other_players  # Add this line to include other players' locations
+        }
         await player.websocket.send(json.dumps(resp))
 
 # Server setup
