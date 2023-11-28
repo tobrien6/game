@@ -11,15 +11,15 @@ def get_db_connection():
     finally:
         conn.close()
 
-def create_table():
+def create_tables():
     with get_db_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS players (
                 player_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id TEXT UNIQUE NOT NULL,
                 name TEXT NOT NULL,
-                position_x INTEGER,
-                position_y INTEGER,
+                x INTEGER,
+                y INTEGER,
                 health INTEGER,
                 action_points REAL,
                 last_update_time REAL,
@@ -31,13 +31,13 @@ def create_table():
 def save_player(player_dict):
     with get_db_connection() as conn:
         conn.execute('''
-            INSERT INTO players(player_id, user_id, name, position_x, position_y, health, action_points, last_update_time)
-            VALUES(:player_id, :user_id, :name, :position_x, :position_y, :health, :action_points, :last_update_time)
+            INSERT INTO players(player_id, user_id, name, x, y, health, action_points, last_update_time)
+            VALUES(:player_id, :user_id, :name, :x, :y, :health, :action_points, :last_update_time)
             ON CONFLICT(player_id) DO UPDATE SET
                 user_id = excluded.user_id,
                 name = excluded.name,
-                position_x = excluded.position_x,
-                position_y = excluded.position_y,
+                x = excluded.x,
+                y = excluded.y,
                 health = excluded.health,
                 action_points = excluded.action_points,
                 last_update_time = excluded.last_update_time
@@ -49,7 +49,7 @@ def get_player(player_id):
         cursor = conn.execute('SELECT * FROM players WHERE player_id = ?', (player_id,))
         row = cursor.fetchone()
         if row:
-            keys = ['player_id', 'user_id', 'name', 'position_x', 'position_y', 'health', 'action_points', 'last_update_time']
+            keys = ['player_id', 'user_id', 'name', 'x', 'y', 'health', 'action_points', 'last_update_time']
             return dict(zip(keys, row))
     return None
 
