@@ -11,7 +11,9 @@ from typing import Dict
 from datetime import datetime, timedelta
 from connection_manager import ConnectionManager, validate_session
 from player import Player
-from world_state import WorldState, WorldGrid
+from world import WorldState, WorldGrid
+from rules_engine import CLIPS
+from game_engine import GE
 from database import create_tables, get_player
 from event_manager import EventManager, EventQueue, EventType
 
@@ -19,8 +21,11 @@ event_queue = EventQueue()
 event_manager = EventManager()
 connection_manager = ConnectionManager(event_manager)
 
-world_grid = WorldGrid(1000, 1000)
+world_grid = WorldGrid()
 world = WorldState(world_grid, event_queue)
+
+rules_engine = CLIPS("CLIPS_rules.txt")
+ge = GE(world, rules_engine)
 
 create_tables()
 
@@ -90,7 +95,6 @@ async def process_game_message(message, player):
         tile_xy = data['tile_xy']
         try:
             await world.move_player_to_tile(player_id, tile_xy)
-            #await player.websocket.send(json.dumps({"action": "PlayerMoved", "result": result}))  # Assuming result is an object with a .to_dict() method
         except ValueError as e:
             await player.websocket.send(json.dumps({"action": "Error", "message": str(e)}))
         except KeyError as e:
@@ -101,6 +105,14 @@ async def process_game_message(message, player):
         chunk = await world.get_chunk((data['x'], data['y']))
         # Send the chunk data back to the client
         await player.websocket.send(json.dumps(chunk))
+
+    if data['action'] == 'UseTargetedAbility':
+        ability_name = data['ability_name']
+        target_tile = data['tile_xy']
+        try:
+            await ge.use_ability(ability_name, player, target_tile, world, charge=False, aoe=False)
+        except Exception as e:
+            await player.websocket.send(json.dumps({"action": "Error", "message": str(e)}))
 
     if data['action'] == 'InitializePlayer':
         print(data)
@@ -130,4 +142,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(), debug=True)

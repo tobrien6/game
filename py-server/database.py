@@ -30,7 +30,7 @@ def create_tables():
 
 def save_player(player_dict):
     with get_db_connection() as conn:
-        conn.execute('''
+        cursor = conn.execute('''
             INSERT INTO players(player_id, user_id, name, x, y, health, action_points, last_update_time)
             VALUES(:player_id, :user_id, :name, :x, :y, :health, :action_points, :last_update_time)
             ON CONFLICT(player_id) DO UPDATE SET
@@ -40,9 +40,12 @@ def save_player(player_dict):
                 y = excluded.y,
                 health = excluded.health,
                 action_points = excluded.action_points,
-                last_update_time = excluded.last_update_time
+                last_update_time = excluded.last_update_time 
+            RETURNING player_id
         ''', player_dict)
+        pid = cursor.fetchone()[0]
         conn.commit()
+        return pid
 
 def get_player(player_id):
     with get_db_connection() as conn:
