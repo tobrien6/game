@@ -1,13 +1,16 @@
 from abc import ABC, abstractmethod
+from tile_utils import cheb_dist
+import time
 
 class Ability(ABC):
     def __init__(self, name, ap_cost, cooldown_in_ticks):
         self.name = name
         self.ap_cost = ap_cost  # Action points or other resources required
         self.cooldown_in_ticks = cooldown_in_ticks
+        self.last_used_ts = 0
 
     @abstractmethod
-    def use(self, player, target_tile, world):
+    def use(self, player, target, world):
         """
         Executes the ability.
         :param player: The player using the ability.
@@ -17,117 +20,71 @@ class Ability(ABC):
         pass
 
     @abstractmethod
-    def is_valid(self, player, target_tile, world):
+    def is_valid(self, player, target, world):
         pass
 
-    @abstractmethod
-    def cooldown(self):
-        """
-        Returns the cooldown time for the ability.
-        """
-        pass
+    def in_cooldown(self, player, world):
+        return self.cooldown_in_ticks > (time.time() - self.last_used_ts) / player.tick_time()
 
-    @abstractmethod
-    def cost(self):
-        """
-        Returns the action point cost or other resource cost for using the ability.
-        """
-        pass
-
-
-class Attack(Ability):
-    def __init__(self, name, ap_cost, cooldown_in_ticks, damage, damage_type="physical"):
-        super().__init__(name, ap_cost, cooldown_in_ticks)
-        self.damage = damage  # Damage dealt by the attack
-        self.damage_type = damage_type
-
-    def use(self, player, target_tile, world, entity_target):
-        """
-        Executes the attack ability.
-        :param player: The player using the ability.
-        :param target_tile: The target tile of the attack.
-        :param world: The current state of the world.
-        """
-        # Implementation of attack logic
-        # Example: Reduce health of an enemy on target_tile, if any
-        ret = []
-        print(f"target: {entity_target}")
-        try:
-            if entity_target:
-                ret.append(f"""(assert
-                                ({self.name} 
-                                    (source {player.get_id()})
-                                    (target {entity_target.get_id()})
-                                )
-                            )""")
-            print(ret)
-            return ret
-        except Exception as e:
-            print(e)
-
-    def add_charge(self, player):
-        # Implementation for adding a charge to the ability
-        # Example: Increment ability charge count
-        player.abilities[self.name].charges += 1
-
-    def is_valid(self, player, target_tile, world):
-        # Implementation to check if the attack can be executed
-        # Example: Check if an enemy is present at target_tile
-        return True
-        #return world.is_enemy_at(target_tile)
-
-    def cooldown(self):
-        # Returns the cooldown time for the attack ability
-        return self.cooldown_in_ticks
-
-    def cost(self):
-        # Returns the action point cost for using the attack ability
+    def cost(self, player, world):
+        # TODO: this might be modified by effects on the player or world
         return self.ap_cost
 
 
-class Spell(Ability):
-    def __init__(self, name, cost, effect, min_charges, max_charges, cooldown):
-        super().__init__(name, cost)
-        self.effect = effect
+class Attack(Ability):
+    def __init__(self, name, ap_cost, cooldown_in_ticks,
+                 ability_range, effect_range, min_charges, max_charges,
+                 damage_amt, damage_type):
+        super().__init__(name, ap_cost, cooldown_in_ticks)
+        self.ability_range = ability_range
+        self.effect_range = effect_range
         self.min_charges = min_charges
         self.max_charges = max_charges
-        self.cooldown = cooldown  # In ticks
         self.charges = 0
-        self.last_cast_time = 0  # Timestamp of the last cast
+        self.damage_amt = damage_amt
+        self.damage_type = damage_type
 
-    def add_charge(self, player):
-        if self.is_on_cooldown():
-            raise ValueError("Spell is on cooldown")
-
-        current_time = time.time()
-        if self.last_cast_time and current_time - self.last_cast_time < player.tick_time:
-            raise ValueError("Cannot add charge yet")
-
-        if self.charges < self.max_charges:
-            self.charges += 1
-            self.last_cast_time = current_time
-            player.action_points -= self.cost
-        else:
-            raise ValueError("Spell has reached maximum charges")
-
-    def is_valid(self):
-        # not implemented
-        return True
-
-    def use(self, player, target_tile, world, charge):
-        if charge:
-            self.add_charge(player)
-        if self.charges < self.min_charges:
-            raise ValueError("Not enough charges to activate spell")
-        # Spell activation logic
+    @abstractmethod
+    async def CLIPS_effect_fact(self, player, entity_target, world):
         pass
 
-    def reset(self):
+    async def get_target_entities(self, target, world):
+        entities = await world.get_entities_in_range(target, self.effect_range)
+        return entities
+
+    async def use(self, player, target, world):
+        # Implementation of attack logic
+        # Example: Reduce health of an enemy on target_tile, if any
+        ts = time.time()
+        whiteboard = []
+        # first apply any effect on the player
+        whiteboard.extend(player.effects)
+        for entity in await self.get_target_entities(target, world):
+            # First apply the effect of the attack on the target entity
+            whiteboard.append(self.CLIPS_effect_fact(player, entity, world))
+            # Then apply any effects on the target entity
+            whiteboard.extend(entity.effects)
+        player.action_points -= super().cost(player, world)
+        self.last_used_ts = ts
         self.charges = 0
-        self.last_cast_time = time.time()
+        return whiteboard
 
-    def is_on_cooldown(self):
-        return time.time() - self.last_cast_time < self.cooldown * player.tick_time()
+    async def add_charge(self, player, world):
+        # Implementation for adding a charge to the ability
+        self.last_used_ts = time.time()
+        player.abilities[self.name].charges += 1
+        player.action_points -= super().cost(player, world)
 
-    def interrupt(self):
-        self.reset()
+    async def target_valid(self, player, target, world):
+        player_pos = (player.x, player.y)
+        return cheb_dist(player_pos, target) <= self.ability_range
+
+    async def is_valid(self, player, target, world):
+        cooldown_ok = not super().in_cooldown(player, world)
+        target_ok = self.target_valid(player, target, world)
+        ap_ok = player.action_points >= super().cost(player, world)
+        print(cooldown_ok, target_ok, ap_ok)
+        return cooldown_ok and target_ok and ap_ok
+
+    async def interrupt(self):
+        self.charges = 0

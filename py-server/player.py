@@ -18,10 +18,10 @@ class Player:
         self.abilities = {}
         self.effects = []
         self.tick_effects = []
-        self.tick_time = 1000
+        self.ms_per_tick = 1000
 
         stab = Stab()
-        physical_resist = f"(resist (player_id {self.player_id}) (type physical) (factor 0.9))"
+        physical_resist = f"""(assert (resist (player_id "{self.player_id}") (type "physical") (factor 0.9)))"""
 
         self.abilities[stab.name] = stab
         self.effects.append(physical_resist)
@@ -102,11 +102,11 @@ class Player:
     def add_ability(self, ability):
         self.abilities[ability.name] = ability
 
-    def tick_time():
+    def tick_time(self):
         # how many ms per tick for this player. Each player has a different tick_time
-        new_tick_time = self.tick_time
+        new_tick_time = self.ms_per_tick
         for tick_effect in self.tick_effects:
-            new_tick_time = tick_effect(tick_time)
+            new_tick_time = tick_effect(self.ms_per_tick)
         return new_tick_time
 
 

@@ -1,6 +1,7 @@
 from enum import Enum
 import random
 from event_manager import EventType
+from tile_utils import cheb_dist
 
 
 CHUNK_SIZE = 64
@@ -91,10 +92,8 @@ class WorldState:
         self.world_grid = world_grid
         self.event_queue = event_queue
 
-
     async def get_player(player_id):
         return self.players[player_id]
-
 
     async def get_chunk(self, chunk_coords):
         chunk = self.world_grid.load_chunk(chunk_coords)
@@ -110,23 +109,19 @@ class WorldState:
     async def add_player(self, player):
         self.players[player.player_id] = player
 
-    #async def get_player(self, player_id):
-    #    return self.players[player_id]
-
-
-    async def get_entity_at(self, tile_xy):
-        # placeholder implementation just loops through players and returns first one on tile
+    async def get_entities_in_range(self, tile_xy, range):
+        # for now, the only entities are players
         tile_x = tile_xy[0]
         tile_y = tile_xy[1]
         try:
+            entities = []
             for pid, p in self.players.items():
-                if p.x == tile_x and p.y == tile_y:
-                    return p
-            return None
+                if cheb_dist((tile_x, tile_y), (p.x, p.y)) <= range:
+                    entities.append(p)
+            return entities
         except Exception as e:
             print(e)
             return None
-
 
     async def move_player_to_tile(self, player_id, tile_xy):
         # DEBUG

@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from connection_manager import ConnectionManager, validate_session
 from player import Player
 from world import WorldState, WorldGrid
-from rules_engine import CLIPS
+from rules_engine import RulesEngine
 from game_engine import GE
 from database import create_tables, get_player
 from event_manager import EventManager, EventQueue, EventType
@@ -24,7 +24,7 @@ connection_manager = ConnectionManager(event_manager)
 world_grid = WorldGrid()
 world = WorldState(world_grid, event_queue)
 
-rules_engine = CLIPS("CLIPS_rules.txt")
+rules_engine = RulesEngine("CLIPS_rules.txt")
 ge = GE(world, rules_engine)
 
 create_tables()
@@ -108,9 +108,11 @@ async def process_game_message(message, player):
 
     if data['action'] == 'UseTargetedAbility':
         ability_name = data['ability_name']
-        target_tile = data['tile_xy']
+        x = data['x']
+        y = data['y']
+        print(player.abilities.items())
         try:
-            await ge.use_ability(ability_name, player, target_tile, world, charge=False, aoe=False)
+            await ge.use_ability(ability_name, player, (x,y), world, charge=False)
         except Exception as e:
             await player.websocket.send(json.dumps({"action": "Error", "message": str(e)}))
 
