@@ -92,7 +92,7 @@ class WorldState:
         self.world_grid = world_grid
         self.event_queue = event_queue
 
-    async def get_player(player_id):
+    async def get_player(self, player_id):
         return self.players[player_id]
 
     async def get_chunk(self, chunk_coords):
@@ -151,7 +151,7 @@ class WorldState:
                 player.move_to_tile(tile_x, tile_y, self.world_grid)  # This may need to be updated as well.
                 #self.world_grid.update_tile(chunk_coords, local_x, local_y, occupied=True) # for this to work, I need to set previous tile to occupied false
 
-            event = {'type': EventType.PLAYER_MOVED, 'data': {'action': 'PlayerMoved', 'player_id': player_id, 'x': player.x, 'y': player.y}}
+            event = {'type': EventType.PLAYER_LOC, 'data': {'action': 'PlayerLoc', 'player_id': player_id, 'x': player.x, 'y': player.y}}
             await self.event_queue.put_event(event)
         else:
             raise KeyError("Player not found")

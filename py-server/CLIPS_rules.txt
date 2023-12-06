@@ -29,4 +29,3 @@
    (modify ?r (applied_to $?applied ?id)) ; Mark this resist as applied to this damage source
    (modify ?d (amount ?reduced-amount))
 )
-

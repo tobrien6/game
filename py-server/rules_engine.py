@@ -16,7 +16,18 @@ class RulesEngine:
             # print error from clips
             print(e)
             traceback.print_exc()
-        print(f"facts: {self.env.facts()}")
+        print(f"facts: {list(self.env.facts())}")
+
+    def add_rule(self, rule_string):
+        """Adds a new rule to the environment."""
+        print(f"adding rule: {rule_string}")
+        try:
+            self.env.build(rule_string)
+        except CLIPSError as e:
+            # print error from clips
+            print(e)
+            traceback.print_exc()
+        print(f"rules: {list(self.env.rules())}")
 
     def define_functions(self, functions):
         for f in functions:

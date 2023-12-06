@@ -15,8 +15,8 @@ class EventQueue:
 
 
 class EventType(Enum):
-    PLAYER_MOVED = "PlayerMoved"
-    # Define other event types as necessary
+    PLAYER_LOC = "PlayerLoc"
+    PLAYER_HEALTH = "PlayerHealth"
 
 
 class EventManager:

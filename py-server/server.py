@@ -25,7 +25,7 @@ world_grid = WorldGrid()
 world = WorldState(world_grid, event_queue)
 
 rules_engine = RulesEngine("CLIPS_rules.txt")
-ge = GE(world, rules_engine)
+ge = GE(world, rules_engine, event_queue)
 
 create_tables()
 
@@ -118,20 +118,21 @@ async def process_game_message(message, player):
 
     if data['action'] == 'InitializePlayer':
         print(data)
-        player_id = player.player_id
-        x = player.x
-        y = player.y
         # Gather the locations of all other players
         other_players = [
-            {"player_id": p.player_id, "x": p.x, "y": p.y}
-            for p in world.players.values() if p.player_id != player_id
+            {"player_id": p.player_id,
+             "x": p.x,
+             "y": p.y,
+             "health": p.health}
+            for p in world.players.values() if p.player_id != player.player_id
         ]
         # Send initialization data including other players' locations
         resp = {
             "action": "InitializePlayer", 
-            "player_id": player_id,
-            "x": x,
-            "y": y,
+            "player_id": player.player_id,
+            "x": player.x,
+            "y": player.y,
+            "health": player.health,
             "other_players": other_players  # Add this line to include other players' locations
         }
         await player.websocket.send(json.dumps(resp))

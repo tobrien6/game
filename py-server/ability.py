@@ -24,7 +24,7 @@ class Ability(ABC):
         pass
 
     def in_cooldown(self, player, world):
-        return self.cooldown_in_ticks > (time.time() - self.last_used_ts) / player.tick_time()
+        return self.cooldown_in_ticks > (time.time() - self.last_used_ts)*1000 / player.tick_time()
 
     def cost(self, player, world):
         # TODO: this might be modified by effects on the player or world
@@ -81,7 +81,7 @@ class Attack(Ability):
 
     async def is_valid(self, player, target, world):
         cooldown_ok = not super().in_cooldown(player, world)
-        target_ok = self.target_valid(player, target, world)
+        target_ok = await self.target_valid(player, target, world)
         ap_ok = player.action_points >= super().cost(player, world)
         print(cooldown_ok, target_ok, ap_ok)
         return cooldown_ok and target_ok and ap_ok

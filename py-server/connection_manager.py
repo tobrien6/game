@@ -1,4 +1,5 @@
 import aiohttp
+import asyncio
 from event_manager import EventType
 
 class ConnectionManager:
@@ -8,8 +9,9 @@ class ConnectionManager:
 
     def register(self, player):
         self.connections[player.player_id] = player
-        # Subscribe the player to the PlayerMoved event
-        self.event_manager.subscribe(EventType.PLAYER_MOVED, player.send_event)
+        # Subscribe the player to events
+        self.event_manager.subscribe(EventType.PLAYER_LOC, player.send_event)
+        self.event_manager.subscribe(EventType.PLAYER_HEALTH, player.send_event)
 
     def unregister(self, player):
         # Unsubscribe the player from all events

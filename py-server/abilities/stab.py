@@ -11,6 +11,7 @@ class Stab(Attack):
                         damage_amt, damage_type)
 
 
+    ### NOTE: Need to have a unique ID in the CLIPS def for each damage fact. MISSING HERE
     def CLIPS_effect_fact(self, player, entity_target, world):
         return f"""(assert (damage
                     (source "{player.get_id()}")
