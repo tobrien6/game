@@ -78,7 +78,7 @@ class Attack(Ability):
             whiteboard.append(self.CLIPS_effect_fact(player, entity, world))
             # Then apply any effects on the target entity
             whiteboard.extend(entity.effects)
-        player.update_action_points(-self.cost(player, world))
+        await player.update_action_points(-self.cost(player, world))
         self.last_used_ts = ts
         self.charges = 0
         return whiteboard
@@ -87,7 +87,7 @@ class Attack(Ability):
         # Implementation for adding a charge to the ability
         self.last_used_ts = time.time()
         player.abilities[self.name].charges += 1
-        player.update_action_points(-self.cost(player, world))
+        await player.update_action_points(-self.cost(player, world))
 
     async def target_valid(self, player, target, world):
         player_pos = (player.x, player.y)

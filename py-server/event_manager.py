@@ -19,6 +19,7 @@ class EventType(Enum):
     PLAYER_HEALTH = "PlayerHealth"
     PLAYER_ABILITIES = "PlayerAbilities"
     PLAYER_AP = "PlayerAP"
+    PLAYER_AP_USAGE = "PlayerAPUsage"
 
 
 class EventManager:

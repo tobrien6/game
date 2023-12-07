@@ -7,13 +7,16 @@ class ConnectionManager:
         self.event_manager = event_manager
         self.connections = {}  # This will store player_id: Player pairs
 
-    def register(self, player):
-        self.connections[player.player_id] = player
-        # Subscribe the player to events
-        self.event_manager.subscribe(EventType.PLAYER_LOC, player.send_event)
-        self.event_manager.subscribe(EventType.PLAYER_HEALTH, player.send_event)
-        self.event_manager.subscribe(EventType.PLAYER_ABILITIES, player.send_event)
-        self.event_manager.subscribe(EventType.PLAYER_AP, player.send_event)
+    def register(self, player=None, world=None):
+        if player:
+            self.connections[player.player_id] = player
+            # Subscribe the player to events
+            self.event_manager.subscribe(EventType.PLAYER_LOC, player.send_event)
+            self.event_manager.subscribe(EventType.PLAYER_HEALTH, player.send_event)
+            self.event_manager.subscribe(EventType.PLAYER_ABILITIES, player.send_event)
+            self.event_manager.subscribe(EventType.PLAYER_AP, player.send_event)
+        if world:
+            self.event_manager.subscribe(EventType.PLAYER_AP_USAGE, world.handle_ap_update)
 
     def unregister(self, player):
         # Unsubscribe the player from all events
@@ -30,7 +33,6 @@ class ConnectionManager:
     async def broadcast(self, message):
         # Using asyncio.gather to send concurrently
         await asyncio.gather(*(player.websocket.send(message) for player in self.connections.values() if player.websocket))
-
 
 
 # This function would ideally be an async call to your auth server to validate the session token

@@ -109,19 +109,43 @@ class WorldState:
     async def add_player(self, player):
         self.players[player.player_id] = player
 
-    async def get_entities_in_range(self, tile_xy, range):
+    async def get_entities_in_range(self, tile_xy, range, exclude_player_id=None):
         # for now, the only entities are players
         tile_x = tile_xy[0]
         tile_y = tile_xy[1]
         try:
             entities = []
             for pid, p in self.players.items():
-                if cheb_dist((tile_x, tile_y), (p.x, p.y)) <= range:
-                    entities.append(p)
+                if pid != exclude_player_id and p.health > 0:
+                    if cheb_dist((tile_x, tile_y), (p.x, p.y)) <= range:
+                        entities.append(p)
             return entities
         except Exception as e:
             print(e)
             return None
+
+    async def handle_ap_update(self, event):
+        player = event['player']
+        ap_change = event['ap_used']
+
+        # Check if AP was used (negative change)
+        if ap_change < 0:
+            dist_range = 10  # Define the range for AP distribution
+            player_loc = (player.x, player.y)
+            pid = player.player_id
+            nearby_players = await self.get_entities_in_range(player_loc, dist_range, exclude_player_id=pid)
+            print(f"nearby players: {nearby_players}")
+            if nearby_players:
+                print(f"nearby players: {nearby_players}")
+                distributed_ap = -ap_change / len(nearby_players)
+                for player in nearby_players:
+
+                    await player.update_action_points(distributed_ap)
+                    event = {'action': 'PlayerAP',
+                                     'player_id': player.player_id,
+                                     'ap': player.action_points}
+                    await player.send_event(event)
+
 
     async def move_player_to_tile(self, player_id, tile_xy):
         # DEBUG
@@ -145,11 +169,20 @@ class WorldState:
             # Check if the move to the new tile within the chunk is valid.
             if self.world_grid.is_move_valid(chunk_coords, local_x, local_y, player):
                 # Move the player to the tile and update the tile occupation status.
-                player.move_to_tile(tile_x, tile_y, self.world_grid)  # This may need to be updated as well.
+                n_entities_near = await self.get_entities_in_range(tile_xy, 10, exclude_player_id=player_id)
+                await player.move_to_tile(tile_x, tile_y, self.world_grid, n_entities_near)  # This may need to be updated as well.
                 #self.world_grid.update_tile(chunk_coords, local_x, local_y, occupied=True) # for this to work, I need to set previous tile to occupied false
-
-            event = {'type': EventType.PLAYER_LOC,
-                     'data': {'action': 'PlayerLoc', 'player_id': player_id, 'x': player.x, 'y': player.y}}
-            await self.event_queue.put_event(event)
+                
+                event = {'type': EventType.PLAYER_LOC,
+                        'data': {'action': 'PlayerLoc',
+                                 'player_id': player_id,
+                                 'x': player.x,
+                                 'y': player.y,
+                                 'ap': player.action_points}}
+                await self.event_queue.put_event(event)
+                return True
+            else:
+                raise ValueError("Invalid move")
+                return False
         else:
             raise KeyError("Player not found")
