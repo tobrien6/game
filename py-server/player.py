@@ -5,7 +5,7 @@ import json
 from abilities import *
 
 class Player:
-    def __init__(self, player_id, user_id, name, websocket, x=0, y=0, health=100, action_points=1000.0, last_update_time=None):
+    def __init__(self, player_id, user_id, name, websocket, x=0, y=0, health=100, action_points=10.0, last_update_time=None):
         self.player_id = player_id
         self.user_id = user_id
         self.name = name
@@ -17,13 +17,18 @@ class Player:
         self.websocket = websocket
         self.abilities = {}
         self.effects = []
-        self.tick_effects = []
-        self.ms_per_tick = 1000
+        self.tick_time_effects = []
+        self.ap_tick_effects = []
+        self._ap_per_tick = 1.0
+        self._ms_per_tick = 5000
 
         stab = Stab()
+        fireball = Fireball()
         physical_resist = f"""(assert (resist (player_id "{self.player_id}") (type "physical") (factor 0.9)))"""
 
         self.abilities[stab.name] = stab
+        self.abilities[fireball.name] = fireball
+
         self.effects.append(physical_resist)
 
     def get_id(self):
@@ -38,13 +43,15 @@ class Player:
             'y': self.y,
             'health': self.health,
             'action_points': self.action_points,
-            'last_update_time': self.last_update_time
+            'ap_per_tick': self.get_ap_per_tick(),
+            'ms_per_tick': self.get_tick_time(),
+            'last_update_time': self.last_update_time,
         }
 
     async def send_event(self, event):
         if self.websocket.open:
             try:
-                await self.websocket.send(json.dumps(event))
+                await self.websocket.send(json.dumps(event, default=vars))
             except Exception as e:
                 # Handle exceptions, which can happen if the connection is closed
                 print(f"Error sending event: {e}")
@@ -66,47 +73,54 @@ class Player:
             x=0,  # Default position
             y=0,  # Default position
             health=100,  # Default health
-            action_points=1000.0,  # Default action points
+            action_points=10.0,  # Default action points
             last_update_time=time.time(),  # Current time as last update
             websocket=websocket
         )
         new_player.player_id = new_player.save()
         return new_player
 
-    def update_action_points(self):
-        # dummy implementation
+    def update_action_points(self, amount=None):
+        if amount is not None:
+            self.action_points += amount
         now = time.time()
-        time_elapsed = now - self.last_update_time  # time_elapsed is in milliseconds
-        self.action_points += float(time_elapsed)
-        self.action_points = max(self.action_points, 1000) # infinite AP for now
+        ms_elapsed = (now - self.last_update_time) * 1000  # time_elapsed is in milliseconds
+        ticks = ms_elapsed / self.get_tick_time()
+        self.action_points += self.get_ap_per_tick() * ticks
         self.last_update_time = now
 
     def move_to_tile(self, tile_x, tile_y, world_grid):
         # This function will be called with the tile's x and y the player wants to move to.
-        # You need to calculate the cost to move to the new tile here.
         move_cost = self.calculate_move_cost(tile_x, tile_y, world_grid)
         if self.action_points >= move_cost:
             # If the move is valpid and the player has enough action points,
             # set the player's position to the new tile and deduct the action points.
             self.x = tile_x
             self.y = tile_y
-            self.action_points -= move_cost
+            self.update_action_points(-move_cost)
         else:
             raise ValueError("Not enough action points to move.")
 
     def calculate_move_cost(self, tile_x, tile_y, world):
         # Calculate the cost based on the distance to the new tile.
-        # You can add more complex logic here based on terrain type or other factors.
+        # can add more complex logic here based on terrain type or other factors.
         return 1.0  # Assuming a flat cost of 1.0 per tile for simplicity.
 
     def add_ability(self, ability):
         self.abilities[ability.name] = ability
 
-    def tick_time(self):
+    def get_ap_per_tick(self):
+        # how many ap per tick for this player. Each player has a different ap_per_tick
+        new_ap_per_tick = self._ap_per_tick
+        for ap_tick_effect in self.ap_tick_effects:
+            new_ap_per_tick = ap_tick_effect(self._ap_per_tick)
+        return new_ap_per_tick
+
+    def get_tick_time(self):
         # how many ms per tick for this player. Each player has a different tick_time
-        new_tick_time = self.ms_per_tick
-        for tick_effect in self.tick_effects:
-            new_tick_time = tick_effect(self.ms_per_tick)
+        new_tick_time = self._ms_per_tick
+        for tick_time_effect in self.tick_time_effects:
+            new_tick_time = tick_time_effect(self._ms_per_tick)
         return new_tick_time
 
 

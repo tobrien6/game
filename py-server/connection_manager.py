@@ -12,6 +12,8 @@ class ConnectionManager:
         # Subscribe the player to events
         self.event_manager.subscribe(EventType.PLAYER_LOC, player.send_event)
         self.event_manager.subscribe(EventType.PLAYER_HEALTH, player.send_event)
+        self.event_manager.subscribe(EventType.PLAYER_ABILITIES, player.send_event)
+        self.event_manager.subscribe(EventType.PLAYER_AP, player.send_event)
 
     def unregister(self, player):
         # Unsubscribe the player from all events

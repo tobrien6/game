@@ -3,7 +3,7 @@ sys.path.append("..")
 from ability import Attack
 
 class Stab(Attack):
-    def __init__(self, name="stab", ap_cost=10, cooldown_in_ticks=3,
+    def __init__(self, name="stab", ap_cost=2, cooldown_in_ticks=3,
                  ability_range=1, effect_range=0, min_charges=0, max_charges=0,
                  damage_amt=5, damage_type="physical"):
         super().__init__(name, ap_cost, cooldown_in_ticks, 

@@ -134,9 +134,6 @@ class WorldState:
         print(f"PLAYER ID: {player_id}")
         
         if player:
-            # First, update the player's action points.
-            player.update_action_points()
-
             # Player's current location
             cur_x, cur_y = (player.x, player.y)
 
@@ -151,7 +148,8 @@ class WorldState:
                 player.move_to_tile(tile_x, tile_y, self.world_grid)  # This may need to be updated as well.
                 #self.world_grid.update_tile(chunk_coords, local_x, local_y, occupied=True) # for this to work, I need to set previous tile to occupied false
 
-            event = {'type': EventType.PLAYER_LOC, 'data': {'action': 'PlayerLoc', 'player_id': player_id, 'x': player.x, 'y': player.y}}
+            event = {'type': EventType.PLAYER_LOC,
+                     'data': {'action': 'PlayerLoc', 'player_id': player_id, 'x': player.x, 'y': player.y}}
             await self.event_queue.put_event(event)
         else:
             raise KeyError("Player not found")

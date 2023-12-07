@@ -3,6 +3,15 @@ Note: server should always generate subsequent state, and then check if it's a l
 This is easier than having a set of checks for every possible action.
 """
 
+"""
+
+TODO: Implement the sharing of Action Points when a player consumes action points.
+
+    - When a player consumes action points, those action points are distributed
+    evenly among all players within a certain radius. 
+
+"""
+
 import asyncio
 import websockets
 import json
@@ -89,12 +98,17 @@ async def handler(websocket, path):
 async def process_game_message(message, player):
     data = json.loads(message)
     print("received: " + str(data))
+    # update player's action points
+    player.update_action_points()
+    print(f"player {player.player_id} action points: {player.action_points}")
 
     if data['action'] == 'MovePlayerToTile':
         player_id = player.player_id
         tile_xy = data['tile_xy']
         try:
+            # change this to use the game engine
             await world.move_player_to_tile(player_id, tile_xy)
+            await send_ap_update(player)
         except ValueError as e:
             await player.websocket.send(json.dumps({"action": "Error", "message": str(e)}))
         except KeyError as e:
@@ -113,11 +127,14 @@ async def process_game_message(message, player):
         print(player.abilities.items())
         try:
             await ge.use_ability(ability_name, player, (x,y), world, charge=False)
+            await send_ap_update(player)
         except Exception as e:
             await player.websocket.send(json.dumps({"action": "Error", "message": str(e)}))
 
     if data['action'] == 'InitializePlayer':
         print(data)
+        # Send player ability information
+        await ge.send_player_abilities(player)
         # Gather the locations of all other players
         other_players = [
             {"player_id": p.player_id,
@@ -127,15 +144,17 @@ async def process_game_message(message, player):
             for p in world.players.values() if p.player_id != player.player_id
         ]
         # Send initialization data including other players' locations
-        resp = {
-            "action": "InitializePlayer", 
-            "player_id": player.player_id,
-            "x": player.x,
-            "y": player.y,
-            "health": player.health,
-            "other_players": other_players  # Add this line to include other players' locations
-        }
+        resp = player.to_dict()
+        resp['action'] = 'InitializePlayer'
+        resp['other_players'] = other_players
+        await event_queue.put_event({'type': EventType.PLAYER_LOC,
+                                     'data': {"action": "PlayerLoc", "player_id": player.player_id, "x": player.x, "y": player.y}})
         await player.websocket.send(json.dumps(resp))
+
+async def send_ap_update(player):
+    await player.websocket.send(json.dumps({"action": "UpdateAP", 
+                                            "player_id":player.player_id,
+                                            "ap": player.action_points}))
 
 # Server setup
 async def main():

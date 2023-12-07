@@ -17,6 +17,8 @@ class EventQueue:
 class EventType(Enum):
     PLAYER_LOC = "PlayerLoc"
     PLAYER_HEALTH = "PlayerHealth"
+    PLAYER_ABILITIES = "PlayerAbilities"
+    PLAYER_AP = "PlayerAP"
 
 
 class EventManager:

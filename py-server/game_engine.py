@@ -21,6 +21,15 @@ class GE:
                 (clips_apply_damage ?target ?amount)
                 (retract ?d)
             )""")
+        
+
+    async def send_player_abilities(self, player):
+        abilities = list(player.abilities.values())
+        print(abilities)
+        event = {'type': EventType.PLAYER_ABILITIES,
+                 'data': {'action': 'PlayerAbilities', 'player_id': player.player_id, 'abilities': abilities}}
+        await self.event_queue.put_event(event)
+
 
     async def use_ability(self, ability_name, player, target, world, charge=False):
         try:
