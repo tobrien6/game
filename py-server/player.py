@@ -64,9 +64,8 @@ class Player:
 
     async def send_abilities(self):
         abilities = list(self.abilities.values())
-        event = {'type': EventType.PLAYER_ABILITIES,
-                 'data': {'action': 'PlayerAbilities', 'player_id': self.player_id, 'abilities': abilities}}
-        await self.event_queue.put_event(event)
+        event = {'action': 'PlayerAbilities', 'player_id': self.player_id, 'abilities': abilities}
+        await self.send_event(event)
 
     def save(self):
         player_dict = self.to_dict()

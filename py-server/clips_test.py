@@ -1,4 +1,6 @@
 import clips
+import psutil
+import time
 
 DEFTEMPLATE_STRING = """
 (deftemplate person
@@ -17,6 +19,8 @@ DEFRULE_STRING = """
   
 """
 
+[clips.Environment() for _ in range(10000)]
+t = time.time()
 environment = clips.Environment()
 
 def py_test(*der):
@@ -49,4 +53,10 @@ final_facts = []
 for f in environment.facts():
   final_facts.append(str(f))
 
+print(f"took: {time.time() - t}")
+
 print(final_facts)
+
+print(psutil.cpu_percent())
+print(psutil.virtual_memory())  # physical memory usage
+print('memory % used:', psutil.virtual_memory()[2])

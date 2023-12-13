@@ -132,8 +132,6 @@ async def process_game_message(message, player):
 
     if data['action'] == 'InitializePlayer':
         print(data)
-        # Send player ability information
-        await player.send_abilities()
         # Gather the locations of all other players
         other_players = [
             {"player_id": p.player_id,
@@ -153,6 +151,8 @@ async def process_game_message(message, player):
                                               "y": player.y,
                                               "ap": player.action_points,}})
         await player.websocket.send(json.dumps(resp))
+        # Send player ability information
+        await player.send_abilities()
 
 # Server setup
 async def main():
